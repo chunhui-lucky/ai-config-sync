@@ -166,11 +166,47 @@ merge_rules() {
     if [[ -n "$rules_file" && -f "$rules_file" ]]; then
         cp "$rules_file" "$RULES_SRC"
         ok "从 $source_tool 复制规则文件 → $RULES_SRC"
+        # 追加配置维护段落（已有规则文件不包含此段落）
+        append_config_maintenance_rules
+        ok "已追加配置维护指引"
     else
-        # 使用默认模板
+        # 使用默认模板（已包含配置维护段落）
         cp "$AI_CONFIG_INSTALL_DIR/templates/rules.md" "$RULES_SRC"
         info "未找到已有规则文件，已创建默认模板 → $RULES_SRC"
     fi
+}
+
+# ---- 追加配置维护段落 ----
+append_config_maintenance_rules() {
+    cat >> "$RULES_SRC" << 'RULES_EOF'
+
+## 配置维护（MCP / Rules / Skills）
+
+本用户使用 ai-config-sync 统一管理多个 AI 工具（Codex / Cursor / Claude Code）的配置。所有配置修改必须写入统一仓库，而不是各工具自己的配置文件。
+
+### Rules（规则）
+- 添加或修改 rule 时，直接编辑本文件。
+- 本文件通过符号链接被所有 AI 工具共享，改完立即生效，无需额外同步。
+
+### MCP（MCP Server）
+- 添加、修改或删除 MCP server 时，编辑 `~/.config/ai-config/mcp.json`（不要直接改各工具的配置文件）。
+- 编辑完成后，运行 `ai-config sync mcp` 同步到所有工具。
+- 格式说明：
+  - stdio 类型：`{"command": "...", "args": [...], "env": {...}}`
+  - HTTP/SSE 类型：`{"url": "...", "http_headers": {...}}`
+
+### Skills（技能）
+- 添加或修改 skill 时，操作 `~/.config/skillshare/skills/` 目录。
+- 新建 skill：在该目录下创建子目录，包含 `SKILL.md` 文件。
+- 修改 skill：直接编辑对应的 `SKILL.md`（符号链接共享，改完立即生效）。
+- 新建 skill 后，运行 `skillshare sync` 创建符号链接到各工具。
+
+### 重要
+- **不要**直接修改 `~/.codex/config.toml` 中的 `[mcp_servers]` 段落。
+- **不要**直接修改 `~/.cursor/mcp.json`（虽然它是符号链接，但编辑器可能覆盖链接）。
+- **不要**用 `claude mcp add` 命令添加 MCP（会绕过统一管理）。
+- 所有 MCP 变更统一走 `~/.config/ai-config/mcp.json` + `ai-config sync mcp`。
+RULES_EOF
 }
 
 # ---- 备份原始配置 ----

@@ -114,6 +114,22 @@ ai-config watch start
 - **stdio**：`command` + `args` + `env`
 - **HTTP/SSE**：`url` + `http_headers`
 
+## AI 自动路由
+
+初始化时，`ai-config init` 会在 `rules.md` 中自动注入一段**配置维护规则**，告诉所有 AI 编程助手：
+
+> 修改 MCP / Rules / Skills 时，必须写入统一配置仓库，而不是各工具自己的配置文件。
+
+这样当你在 Codex / Cursor / Claude Code 中对 AI 说：
+
+| 你说的话 | AI 的正确行为 | 是否自动同步 |
+|---------|------------|------------|
+| "加一条 rule：xxx" | 编辑 `~/.config/ai-config/rules.md` | ✅ 符号链接，即时生效 |
+| "加一个 MCP server：xxx" | 编辑 `~/.config/ai-config/mcp.json` + 运行 `ai-config sync mcp` | ✅ 自动分发 |
+| "加一个 skill：xxx" | 在 `~/.config/skillshare/skills/` 创建 + 运行 `skillshare sync` | ✅ 自动分发 |
+
+这段规则在 `init` 时自动注入，你不需要手动维护。如果你想自定义，可以直接编辑 `rules.md` 中的「配置维护」段落。
+
 ## 添加新的 AI 工具
 
 在 `lib/tools/` 目录下创建一个新文件（如 `windsurf.sh`），实现标准接口：
