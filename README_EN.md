@@ -4,51 +4,40 @@
 
 > Unified configuration management for Codex, Cursor, and Claude Code. Edit once, sync everywhere.
 
-## The Problem
+## Why
 
 When using multiple AI coding assistants, each tool maintains its own configuration:
 
-- **MCP servers** in different formats (JSON / TOML / CLI) — adding one server means editing three places
+- **MCP servers** in different formats (JSON / TOML / CLI) — adding one means editing three places
 - **Rules** scattered across `AGENTS.md`, `.cursorrules`, and `CLAUDE.md`
-- **Configurations drift** over time, causing inconsistent behavior across tools
+- **Config drift** — tools behave differently over time
 
-`ai-config-sync` solves this by maintaining a single source of truth and syncing to all tools automatically.
+`ai-config-sync` gives you a single source of truth that syncs to every tool automatically.
 
-## Quick Start
-
-### macOS / Linux
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
 ```
 
-### Windows (PowerShell)
+> Supports macOS / Linux / Windows (Git Bash). The installer auto-detects your platform and handles dependencies.
 
-```powershell
-irm https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.ps1 | iex
-```
-
-### Windows (Git Bash)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
-```
-
-### Initialize
-
-Scan existing Codex / Cursor / Claude Code configs and merge into the unified repo:
+## Initialize
 
 ```bash
 ai-config init
 ```
 
-Interactively choose a config source (defaults to Codex), then automatically:
-1. Merge all MCP servers into `~/.config/ai-config/mcp.json`
-2. Copy rules to `~/.config/ai-config/rules.md`
-3. Back up original configs
-4. Set up symlinks and run the first sync
+It scans your existing Codex / Cursor / Claude Code configs, lets you pick a source of truth interactively, then automatically:
 
-### Daily Usage
+1. Merges all MCP servers → `~/.config/ai-config/mcp.json`
+2. Copies rules → `~/.config/ai-config/rules.md`
+3. Backs up original configs
+4. Creates symlinks + runs the first sync
+
+**After init, all configs are maintained in `~/.config/ai-config/` only.**
+
+## Daily Usage
 
 ```bash
 # Edit configs (change once)
@@ -60,81 +49,42 @@ ai-config sync
 
 # Check status
 ai-config status
-
-# Start auto-watch (sync on file changes)
-ai-config watch start
 ```
 
-## Commands
+**Rule changes don't need sync** — they're symlinked and take effect instantly. Only MCP changes require `ai-config sync`, because Codex and Claude Code use different config formats that need conversion.
+
+> 💡 With auto-watch enabled (`ai-config watch start`), even MCP changes sync automatically.
+
+## AI Auto-Routing
+
+During `init`, `ai-config` injects a **config maintenance rule** into `rules.md` that tells all AI assistants:
+
+> When modifying MCP / Rules / Skills, always write to the unified config repo — not to tool-specific config files.
+
+So you can just tell your AI assistant:
+
+| What you say | What the AI does | What you need to do |
+|-------------|-----------------|---------------------|
+| "Add a rule: xxx" | Edits `rules.md` | Nothing — instant effect |
+| "Add an MCP: xxx" | Edits `mcp.json` | `ai-config sync` (or auto with watch) |
+| "Add a skill: xxx" | Creates in `skillshare/skills/` | `skillshare sync` |
+
+## Command Reference
 
 | Command | Description |
 |---------|-------------|
-| `ai-config init [--source <tool>]` | Initialize unified config repo |
-| `ai-config sync [mcp\|rules]` | Sync configs to all tools |
+| `ai-config init [--source codex\|cursor\|claude-code]` | Initialize (scan & merge existing configs) |
+| `ai-config sync [mcp\|rules\|project\|all]` | Sync to all tools (default: all) |
+| `ai-config sync project --project <path>` | Sync project-level config |
 | `ai-config status` | Show sync status |
-| `ai-config watch [start\|stop\|log]` | Manage auto-watch |
+| `ai-config watch start` | Start file watcher (auto-sync on changes) |
+| `ai-config watch stop` | Stop file watcher |
+| `ai-config watch log` | Show watcher logs |
 | `ai-config doctor` | Check environment health |
 
-## Platform Support
+## Config Format
 
-| Platform | Symlinks | MCP Sync | Auto-Watch | Auto-Start |
-|----------|----------|----------|------------|------------|
-| **macOS** | `ln -sf` | TOML / symlink / CLI | fswatch | LaunchAgent |
-| **Linux** | `ln -sf` | TOML / symlink / CLI | fswatch | Background process |
-| **WSL** | `ln -sf` | TOML / symlink / CLI | fswatch | Background process |
-| **Windows (Git Bash)** | `mklink /J` | TOML / junction / CLI | Python watchdog | Task Scheduler |
-| **Windows (PowerShell)** | via Git Bash | via Git Bash | via Git Bash | Task Scheduler |
-
-### Windows Prerequisites
-
-- **Git for Windows** (includes Git Bash) — [download](https://git-scm.com/download/win)
-- **Python 3** — [download](https://www.python.org/downloads/)
-- **pip** (comes with Python 3) — used to install `watchdog` for file watching
-
-The installer automatically installs `watchdog` on Windows and creates `.bat` / `.ps1` wrappers so `ai-config` works in both Git Bash and cmd.exe / PowerShell.
-
-## Sync Mechanism
-
-| Config | Codex | Cursor | Claude Code |
-|--------|-------|--------|-------------|
-| **Rules** | Symlink → `AGENTS.md` | Symlink → `.cursorrules` | Symlink → `CLAUDE.md` |
-| **MCP** | TOML convert → `config.toml` | Symlink → `mcp.json` | CLI inject → `settings.json` |
-| **Skills** | Use [skillshare](https://github.com/runkids/skillshare) |
-
-- **Rules / Skills**: Symlinks — editing the file takes effect immediately (real-time)
-- **MCP**: Codex and Claude Code need format conversion, handled automatically by `ai-config sync` or `ai-config watch start`
-
-## Project-Level Config
-
-In addition to global configs (`~/.codex/`, `~/.cursor/`, `~/.claude/`), each AI tool also supports project-level configs:
-
-| Tool | Global Rules | Project-Level Rules |
-|------|-------------|---------------------|
-| Codex | `~/.codex/AGENTS.md` | `<project>/AGENTS.md` |
-| Cursor | `~/.cursorrules` | `<project>/.cursorrules` |
-| Claude Code | `~/.claude/CLAUDE.md` | `<project>/CLAUDE.md` |
-
-Use `ai-config sync project` to sync unified rules to a specific project:
-
-```bash
-# Sync project-level config only
-ai-config sync project --project /path/to/your/project
-
-# Sync both global + project-level
-ai-config sync all --project /path/to/your/project
-```
-
-This creates symlinks in the project directory so all AI tools use the same unified rules when working in that project.
-
-## Config Repo Structure
-
-```
-~/.config/ai-config/
-├── mcp.json     ← Unified MCP config (all MCP servers defined here)
-└── rules.md     ← Unified rules (all AI rules defined here)
-```
-
-### mcp.json Format
+### mcp.json
 
 ```json
 {
@@ -161,23 +111,56 @@ Two MCP server types supported:
 - **stdio**: `command` + `args` + `env`
 - **HTTP/SSE**: `url` + `http_headers`
 
-## AI Auto-Routing
+### rules.md
 
-During `init`, `ai-config` injects a **config maintenance rule** into `rules.md` that tells all AI assistants:
+A plain Markdown file containing the rules you want all AI tools to follow. Any format works — content is imported from your existing rules file during `init`.
 
-> When modifying MCP / Rules / Skills, always write to the unified config repo — not to tool-specific config files.
+---
 
-This means when you tell your AI assistant:
+## How It Works
 
-| What you say | What the AI does | Auto-sync? |
-|-------------|-----------------|------------|
-| "Add a rule: xxx" | Edit `~/.config/ai-config/rules.md` | Yes (symlink, instant) |
-| "Add an MCP server: xxx" | Edit `~/.config/ai-config/mcp.json` + run sync | Yes (auto-distribute) |
-| "Add a skill: xxx" | Create in `~/.config/skillshare/skills/` + run sync | Yes (auto-distribute) |
+The following is for users who want to understand the implementation details.
 
-## Adding New AI Tools
+### Sync Mechanism
 
-Create a new file in `lib/tools/` (e.g., `windsurf.sh`) and implement the standard interface:
+| Config | Codex | Cursor | Claude Code |
+|--------|-------|--------|-------------|
+| **Rules** | Symlink → `AGENTS.md` | Symlink → `.cursorrules` | Symlink → `CLAUDE.md` |
+| **MCP** | JSON→TOML convert → `config.toml` | Symlink → `mcp.json` | CLI `add-json` → `settings.json` |
+| **Skills** | Use [skillshare](https://github.com/runkids/skillshare) |
+
+- **Rules** are symlinked — all tools read the same file, changes take effect instantly
+- **MCP** can't be uniformly symlinked due to format differences: Cursor supports standard JSON (direct link); Codex uses TOML (converted via `_mcp_to_toml.py` on sync); Claude Code only accepts CLI injection (`claude mcp add-json`)
+- **Skills** are out of scope — use [skillshare](https://github.com/runkids/skillshare) (auto-linked by `watch`)
+
+### Platform Support
+
+| Platform | Symlinks | Auto-Watch | Auto-Start |
+|----------|----------|------------|------------|
+| **macOS** | `ln -sf` | fswatch | LaunchAgent |
+| **Linux** | `ln -sf` | fswatch | Background process |
+| **WSL** | `ln -sf` | fswatch | Background process |
+| **Windows (Git Bash)** | junction | Python watchdog | Task Scheduler |
+
+Windows prerequisites: [Git for Windows](https://git-scm.com/download/win) + [Python 3](https://www.python.org/downloads/). The installer auto-installs watchdog and creates `.bat` wrappers.
+
+### Project-Level Config
+
+Each AI tool also supports project-level configs (`<project>/AGENTS.md`, `.cursorrules`, `CLAUDE.md`).
+
+```bash
+ai-config sync project --project /path/to/your/project
+```
+
+Creates symlinks in the project directory pointing to the unified `rules.md`.
+
+### Works with skillshare
+
+[skillshare](https://github.com/runkids/skillshare) handles Skills sync; `ai-config-sync` handles MCP and Rules. Complementary tools — `ai-config watch start` auto-links skillshare's skills directory changes.
+
+## Contributing: Adding New AI Tools
+
+Create a new file in `lib/tools/` (e.g., `windsurf.sh`) implementing the standard interface:
 
 ```bash
 #!/usr/bin/env bash
@@ -197,78 +180,23 @@ tool_sync_rules() {
     safe_symlink "$rules_src" "$HOME/.windsurfrules" ".windsurfrules"
 }
 
-tool_status_mcp() {
-    check_link_status "$HOME/.windsurf/mcp.json" "$MCP_SRC"
-}
-
-tool_status_rules() {
-    check_link_status "$HOME/.windsurfrules" "$RULES_SRC"
-}
-
-tool_get_mcp_source() {
-    [[ -f "$HOME/.windsurf/mcp.json" && ! -L "$HOME/.windsurf/mcp.json" ]] && echo "$HOME/.windsurf/mcp.json"
-}
-
-tool_get_rules_source() {
-    [[ -f "$HOME/.windsurfrules" && ! -L "$HOME/.windsurfrules" ]] && echo "$HOME/.windsurfrules"
-}
+tool_status_mcp()    { check_link_status "$HOME/.windsurf/mcp.json" "$MCP_SRC"; }
+tool_status_rules()  { check_link_status "$HOME/.windsurfrules" "$RULES_SRC"; }
+tool_get_mcp_source()    { [[ -f "$HOME/.windsurf/mcp.json" && ! -L "$HOME/.windsurf/mcp.json" ]] && echo "$HOME/.windsurf/mcp.json"; }
+tool_get_rules_source()  { [[ -f "$HOME/.windsurfrules" && ! -L "$HOME/.windsurfrules" ]] && echo "$HOME/.windsurfrules"; }
 ```
 
-Submit a PR to add support for new tools!
-
-## Auto-Watch
-
-```bash
-# Start (macOS: LaunchAgent; Linux: background; Windows: Task Scheduler)
-ai-config watch start
-
-# Stop
-ai-config watch stop
-
-# View logs
-ai-config watch log
-```
-
-Requires:
-- **macOS / Linux**: [fswatch](https://github.com/emcrisostomo/fswatch) (`brew install fswatch` or `apt install fswatch`)
-- **Windows**: Python `watchdog` package (auto-installed by the installer, or `pip install watchdog`)
+Submit a PR!
 
 ## Uninstall
 
 ```bash
-# Stop watcher
 ai-config watch stop
-
-# Uninstall (keeps config data)
 bash ~/.config/ai-config-sync/install.sh --uninstall
-# Windows PowerShell:
-# .\install.ps1 -Uninstall
 
 # Full cleanup (including config data)
 rm -rf ~/.config/ai-config/
 ```
-
-## Works with skillshare
-
-[skillshare](https://github.com/runkids/skillshare) focuses on Skills sync; `ai-config-sync` focuses on MCP and Rules. They complement each other:
-
-```bash
-# Install skillshare
-npm install -g skillshare
-
-# Initialize
-skillshare init
-
-# Add AI tool targets
-skillshare target add codex ~/.codex/skills
-skillshare target add cursor ~/.cursor/skills
-skillshare target add claude-code ~/.claude/skills
-
-# Sync skills
-skillshare sync
-```
-
-`ai-config watch start` also monitors the skillshare skills directory and auto-syncs on changes.
 
 ## License
 

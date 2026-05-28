@@ -4,144 +4,87 @@
 
 > 统一管理 Codex / Cursor / Claude Code 的 MCP、Rules、Skills 配置。改一处，三端生效。
 
-## 痛点
+## 为什么需要它
 
-使用多个 AI 编程工具时，每个工具各自维护一份配置：
+同时使用多个 AI 编程工具时，每个工具各自维护一份配置：
 
 - **MCP server** 格式不同（JSON / TOML / CLI），加一个要改三处
-- **Rules** 分散在不同文件（`AGENTS.md` / `.cursorrules` / `CLAUDE.md`）
-- 配置不同步时，工具行为不一致
+- **Rules** 分散在 `AGENTS.md` / `.cursorrules` / `CLAUDE.md` 三个文件
+- 配置不同步 → 工具行为不一致
 
 `ai-config-sync` 让你在一个地方维护所有配置，自动同步到每个工具。
 
-## 快速开始
-
-### macOS / Linux
+## 安装
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
 ```
 
-### Windows (PowerShell)
+> 支持 macOS / Linux / Windows (Git Bash)，安装器会自动检测平台并处理依赖。
 
-```powershell
-irm https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.ps1 | iex
-```
-
-### Windows (Git Bash)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
-```
-
-或手动安装：
-
-```bash
-git clone https://github.com/chunhui-lucky/ai-config-sync ~/.config/ai-config-sync
-ln -sf ~/.config/ai-config-sync/bin/ai-config ~/.local/bin/ai-config
-```
-
-### 初始化
-
-扫描已有的 Codex / Cursor / Claude Code 配置，合并到统一仓库：
+## 初始化
 
 ```bash
 ai-config init
 ```
 
-交互式选择配置源（默认 Codex），自动完成：
-1. 合并所有 MCP server 到 `~/.config/ai-config/mcp.json`
-2. 复制规则到 `~/.config/ai-config/rules.md`
-3. 备份原始配置
-4. 建立符号链接 / 执行首次同步
+它会扫描你已有的 Codex / Cursor / Claude Code 配置，交互式选择配置源，然后自动完成：
 
-### 日常使用
+1. 合并所有 MCP server → `~/.config/ai-config/mcp.json`
+2. 复制规则 → `~/.config/ai-config/rules.md`
+3. 备份原始配置
+4. 建立符号链接 + 执行首次同步
+
+**init 之后，所有配置只需在 `~/.config/ai-config/` 下维护。**
+
+## 日常使用
 
 ```bash
-# 编辑配置（改一处）
-vim ~/.config/ai-config/mcp.json     # 改 MCP
-vim ~/.config/ai-config/rules.md     # 改规则
+# 改配置（只改这一处）
+vim ~/.config/ai-config/mcp.json     # 改 MCP server
+vim ~/.config/ai-config/rules.md     # 改 AI 规则
 
 # 同步到所有工具
 ai-config sync
 
 # 查看状态
 ai-config status
-
-# 启动自动监听（文件变化时自动同步）
-ai-config watch start
 ```
 
-## 命令
+**改 Rules 后不需要 sync**（符号链接，改完即时生效）。只有改 MCP 后需要跑 `ai-config sync`，因为 Codex 和 Claude Code 的 MCP 配置格式不同，需要转换。
+
+> 💡 开启自动监听后，改 MCP 也不用手动 sync 了：`ai-config watch start`
+
+## AI 自动路由
+
+初始化时，`ai-config` 会在 `rules.md` 中自动注入一段配置维护规则，告诉 AI：
+
+> 修改 MCP / Rules / Skills 时，必须写入统一配置仓库，不要直接改各工具的配置文件。
+
+这样你直接跟 AI 说就行：
+
+| 你说的话 | AI 的行为 | 你需要做 |
+|---------|----------|---------|
+| "加一条 rule：xxx" | 编辑 `rules.md` | 什么都不用做，即时生效 |
+| "加一个 MCP：xxx" | 编辑 `mcp.json` | `ai-config sync`（或开着 watch 自动） |
+| "加一个 skill：xxx" | 创建在 `skillshare/skills/` | `skillshare sync` |
+
+## 命令参考
 
 | 命令 | 说明 |
 |------|------|
-| `ai-config init [--source <tool>]` | 初始化统一配置仓库 |
-| `ai-config sync [mcp\|rules]` | 同步配置到所有工具 |
+| `ai-config init [--source codex\|cursor\|claude-code]` | 初始化（扫描已有配置并合并） |
+| `ai-config sync [mcp\|rules\|project\|all]` | 同步到所有工具（默认 all） |
+| `ai-config sync project --project <path>` | 同步项目级配置到指定项目 |
 | `ai-config status` | 查看同步状态 |
-| `ai-config watch [start\|stop\|log]` | 管理自动监听 |
+| `ai-config watch start` | 启动自动监听（文件变化时自动同步） |
+| `ai-config watch stop` | 停止自动监听 |
+| `ai-config watch log` | 查看监听日志 |
 | `ai-config doctor` | 检查环境健康状态 |
 
-## 平台支持
+## 配置格式
 
-| 平台 | 符号链接 | MCP 同步 | 自动监听 | 开机自启 |
-|------|---------|----------|---------|---------|
-| **macOS** | `ln -sf` | TOML / symlink / CLI | fswatch | LaunchAgent |
-| **Linux** | `ln -sf` | TOML / symlink / CLI | fswatch | 后台进程 |
-| **WSL** | `ln -sf` | TOML / symlink / CLI | fswatch | 后台进程 |
-| **Windows (Git Bash)** | `mklink /J` | TOML / junction / CLI | Python watchdog | Task Scheduler |
-| **Windows (PowerShell)** | 通过 Git Bash | 通过 Git Bash | 通过 Git Bash | Task Scheduler |
-
-### Windows 前置依赖
-
-- **Git for Windows**（包含 Git Bash）— [下载](https://git-scm.com/download/win)
-- **Python 3** — [下载](https://www.python.org/downloads/)
-- **pip**（Python 3 自带）— 用于安装 `watchdog` 文件监听库
-
-安装器会自动安装 `watchdog`，并创建 `.bat` / `.ps1` 包装脚本，使 `ai-config` 在 Git Bash 和 cmd.exe / PowerShell 中都能使用。
-
-## 同步机制
-
-| 配置项 | Codex | Cursor | Claude Code |
-|--------|-------|--------|-------------|
-| **Rules** | 符号链接 → `AGENTS.md` | 符号链接 → `.cursorrules` | 符号链接 → `CLAUDE.md` |
-| **MCP** | TOML 转换写入 `config.toml` | 符号链接 → `mcp.json` | CLI 注入 `settings.json` |
-| **Skills** | 推荐使用 [skillshare](https://github.com/runkids/skillshare) |
-
-- **Rules / Skills**：通过符号链接，改文件即生效（实时）
-- **MCP**：Codex 和 Claude Code 需要格式转换，`ai-config sync` 或 `ai-config watch start` 自动处理
-
-## 项目级配置
-
-除了全局配置（`~/.codex/`, `~/.cursor/`, `~/.claude/`），每个 AI 工具还支持项目级配置：
-
-| 工具 | 全局 Rules | 项目级 Rules |
-|------|-----------|-------------|
-| Codex | `~/.codex/AGENTS.md` | `<project>/AGENTS.md` |
-| Cursor | `~/.cursorrules` | `<project>/.cursorrules` |
-| Claude Code | `~/.claude/CLAUDE.md` | `<project>/CLAUDE.md` |
-
-使用 `ai-config sync project` 可以将统一规则同步到指定项目：
-
-```bash
-# 同步项目级配置
-ai-config sync project --project /path/to/your/project
-
-# 同时同步全局 + 项目级
-ai-config sync all --project /path/to/your/project
-```
-
-这会在项目目录下创建符号链接，让所有 AI 工具在该项目中使用统一的规则。
-
-## 配置仓库结构
-
-```
-~/.config/ai-config/
-├── mcp.json     ← 统一 MCP 配置（所有工具的 MCP server 都定义在这里）
-└── rules.md     ← 统一规则（所有工具的 AI rules 都定义在这里）
-```
-
-### mcp.json 格式
+### mcp.json
 
 ```json
 {
@@ -168,25 +111,56 @@ ai-config sync all --project /path/to/your/project
 - **stdio**：`command` + `args` + `env`
 - **HTTP/SSE**：`url` + `http_headers`
 
-## AI 自动路由
+### rules.md
 
-初始化时，`ai-config init` 会在 `rules.md` 中自动注入一段**配置维护规则**，告诉所有 AI 编程助手：
+普通 Markdown 文件，内容就是你想让所有 AI 工具遵循的规则。支持任意格式，`init` 时会从你现有的规则文件中导入。
 
-> 修改 MCP / Rules / Skills 时，必须写入统一配置仓库，而不是各工具自己的配置文件。
+---
 
-这样当你在 Codex / Cursor / Claude Code 中对 AI 说：
+## 工作原理
 
-| 你说的话 | AI 的正确行为 | 是否自动同步 |
-|---------|------------|------------|
-| "加一条 rule：xxx" | 编辑 `~/.config/ai-config/rules.md` | ✅ 符号链接，即时生效 |
-| "加一个 MCP server：xxx" | 编辑 `~/.config/ai-config/mcp.json` + 运行 `ai-config sync mcp` | ✅ 自动分发 |
-| "加一个 skill：xxx" | 在 `~/.config/skillshare/skills/` 创建 + 运行 `skillshare sync` | ✅ 自动分发 |
+以下内容面向想了解实现细节的用户和贡献者。
 
-这段规则在 `init` 时自动注入，你不需要手动维护。如果你想自定义，可以直接编辑 `rules.md` 中的「配置维护」段落。
+### 同步机制
 
-## 添加新的 AI 工具
+| 配置项 | Codex | Cursor | Claude Code |
+|--------|-------|--------|-------------|
+| **Rules** | 符号链接 → `AGENTS.md` | 符号链接 → `.cursorrules` | 符号链接 → `CLAUDE.md` |
+| **MCP** | JSON→TOML 转换写入 `config.toml` | 符号链接 → `mcp.json` | CLI `add-json` 注入 `settings.json` |
+| **Skills** | 推荐 [skillshare](https://github.com/runkids/skillshare) |
 
-在 `lib/tools/` 目录下创建一个新文件（如 `windsurf.sh`），实现标准接口：
+- **Rules** 通过符号链接，三个工具读取同一个文件，改即生效
+- **MCP** 因格式差异无法统一符号链接：Cursor 支持标准 JSON 所以直接链接；Codex 用 TOML 格式，`sync` 时通过 `_mcp_to_toml.py` 转换；Claude Code 只能通过 CLI 管理，`sync` 时通过 `claude mcp add-json` 注入
+- **Skills** 不在本工具范围内，推荐使用 skillshare（`watch` 会自动联动）
+
+### 平台支持
+
+| 平台 | 符号链接 | 自动监听 | 开机自启 |
+|------|---------|----------|---------|
+| **macOS** | `ln -sf` | fswatch | LaunchAgent |
+| **Linux** | `ln -sf` | fswatch | 后台进程 |
+| **WSL** | `ln -sf` | fswatch | 后台进程 |
+| **Windows (Git Bash)** | junction | Python watchdog | Task Scheduler |
+
+Windows 前置依赖：[Git for Windows](https://git-scm.com/download/win) + [Python 3](https://www.python.org/downloads/)。安装器会自动安装 watchdog 并创建 `.bat` 包装脚本。
+
+### 项目级配置
+
+每个 AI 工具除了全局配置，还支持项目级配置（`<project>/AGENTS.md`、`.cursorrules`、`CLAUDE.md`）。
+
+```bash
+ai-config sync project --project /path/to/your/project
+```
+
+会在项目目录下创建符号链接，指向统一的 `rules.md`。
+
+### 与 skillshare 配合
+
+[skillshare](https://github.com/runkids/skillshare) 负责 Skills 同步，`ai-config-sync` 负责 MCP 和 Rules，互补关系。`ai-config watch start` 会自动联动 skillshare 的 skills 目录变化。
+
+## 贡献指南：添加新的 AI 工具
+
+在 `lib/tools/` 下创建新文件（如 `windsurf.sh`），实现标准接口：
 
 ```bash
 #!/usr/bin/env bash
@@ -206,93 +180,24 @@ tool_sync_rules() {
     safe_symlink "$rules_src" "$HOME/.windsurfrules" ".windsurfrules"
 }
 
-tool_status_mcp() {
-    check_link_status "$HOME/.windsurf/mcp.json" "$MCP_SRC"
-}
-
-tool_status_rules() {
-    check_link_status "$HOME/.windsurfrules" "$RULES_SRC"
-}
-
-tool_get_mcp_source() {
-    [[ -f "$HOME/.windsurf/mcp.json" && ! -L "$HOME/.windsurf/mcp.json" ]] && echo "$HOME/.windsurf/mcp.json"
-}
-
-tool_get_rules_source() {
-    [[ -f "$HOME/.windsurfrules" && ! -L "$HOME/.windsurfrules" ]] && echo "$HOME/.windsurfrules"
-}
+tool_status_mcp()    { check_link_status "$HOME/.windsurf/mcp.json" "$MCP_SRC"; }
+tool_status_rules()  { check_link_status "$HOME/.windsurfrules" "$RULES_SRC"; }
+tool_get_mcp_source()    { [[ -f "$HOME/.windsurf/mcp.json" && ! -L "$HOME/.windsurf/mcp.json" ]] && echo "$HOME/.windsurf/mcp.json"; }
+tool_get_rules_source()  { [[ -f "$HOME/.windsurfrules" && ! -L "$HOME/.windsurfrules" ]] && echo "$HOME/.windsurfrules"; }
 ```
 
-提交 PR 即可支持新工具！
-
-## 自动监听
-
-```bash
-# 启动（macOS: LaunchAgent, Linux: 后台进程, Windows: Task Scheduler）
-ai-config watch start
-
-# 停止
-ai-config watch stop
-
-# 查看日志
-ai-config watch log
-```
-
-需要安装文件监听工具：
-
-```bash
-# macOS
-brew install fswatch
-
-# Ubuntu/Debian
-sudo apt install fswatch
-
-# Fedora
-sudo yum install fswatch
-
-# Windows (自动安装，或手动)
-pip install watchdog
-```
+提交 PR 即可！
 
 ## 卸载
 
 ```bash
-# 停止监听
 ai-config watch stop
-
-# 卸载工具（保留配置数据）
-# macOS / Linux / Windows Git Bash:
 bash ~/.config/ai-config-sync/install.sh --uninstall
-
-# Windows PowerShell:
-# .\install.ps1 -Uninstall
 
 # 完全清除（包括配置数据）
 rm -rf ~/.config/ai-config/
 ```
 
-## 与 skillshare 配合
-
-[skillshare](https://github.com/runkids/skillshare) 专注于 Skills 同步，`ai-config-sync` 专注于 MCP 和 Rules。两者互补：
-
-```bash
-# 安装 skillshare
-npm install -g skillshare
-
-# 初始化 skillshare
-skillshare init
-
-# 添加 AI 工具目标
-skillshare target add codex ~/.codex/skills
-skillshare target add cursor ~/.cursor/skills
-skillshare target add claude-code ~/.claude/skills
-
-# 同步 skills
-skillshare sync
-```
-
-`ai-config watch start` 会同时监听 skillshare 的 skills 目录变化并自动同步。
-
-## 许可证
+## License
 
 MIT
