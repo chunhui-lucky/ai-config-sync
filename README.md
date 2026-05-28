@@ -17,13 +17,13 @@
 ### 安装
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/user/ai-config-sync/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
 ```
 
 或手动安装：
 
 ```bash
-git clone https://github.com/user/ai-config-sync ~/.config/ai-config-sync
+git clone https://github.com/chunhui-lucky/ai-config-sync ~/.config/ai-config-sync
 ln -sf ~/.config/ai-config-sync/bin/ai-config ~/.local/bin/ai-config
 ```
 

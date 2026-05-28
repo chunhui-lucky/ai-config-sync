@@ -8,7 +8,7 @@
 # ============================================================
 set -euo pipefail
 
-REPO_URL="${AI_CONFIG_REPO:-https://github.com/user/ai-config-sync}"
+REPO_URL="${AI_CONFIG_REPO:-https://github.com/chunhui-lucky/ai-config-sync}"
 INSTALL_DIR="$HOME/.config/ai-config-sync"
 BIN_DIR=""
 SCRIPT_NAME="ai-config"

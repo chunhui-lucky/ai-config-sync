@@ -68,7 +68,7 @@ ai-config — 统一 AI 编程工具配置管理
   ~/.config/ai-config/mcp.json            # 统一 MCP 配置源
   ~/.config/ai-config/rules.md            # 统一规则源
 
-更多信息: https://github.com/user/ai-config-sync
+更多信息: https://github.com/chunhui-lucky/ai-config-sync
 EOF
 }
 
