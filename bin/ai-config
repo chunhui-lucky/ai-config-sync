@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# ============================================================
+# ai-config — 统一 AI 编程工具配置管理
+#
+# 用法: ai-config <command> [args]
+# ============================================================
+set -euo pipefail
+
+VERSION="0.1.0"
+
+# 确定安装目录
+if [[ -n "${AI_CONFIG_INSTALL_DIR:-}" ]]; then
+    : # 已设置
+elif [[ -d "$HOME/.config/ai-config-sync" ]]; then
+    AI_CONFIG_INSTALL_DIR="$HOME/.config/ai-config-sync"
+elif [[ -d "$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")/../lib" ]]; then
+    AI_CONFIG_INSTALL_DIR="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || realpath "$0" 2>/dev/null || echo "$0")")/.." && pwd)"
+else
+    echo "错误: 找不到 ai-config-sync 安装目录" >&2
+    echo "请设置 AI_CONFIG_INSTALL_DIR 环境变量或重新安装" >&2
+    exit 1
+fi
+export AI_CONFIG_INSTALL_DIR
+
+# 加载公共函数
+source "$AI_CONFIG_INSTALL_DIR/lib/utils.sh"
+export VERSION
+
+# 加载命令模块
+source "$AI_CONFIG_INSTALL_DIR/lib/init.sh"
+source "$AI_CONFIG_INSTALL_DIR/lib/sync.sh"
+source "$AI_CONFIG_INSTALL_DIR/lib/status.sh"
+source "$AI_CONFIG_INSTALL_DIR/lib/watch.sh"
+source "$AI_CONFIG_INSTALL_DIR/lib/doctor.sh"
+
+# ---- 帮助 ----
+show_help() {
+    cat << 'EOF'
+ai-config — 统一 AI 编程工具配置管理
+
+同步 MCP server、Rules、Skills 配置到 Codex / Cursor / Claude Code。
+
+用法:
+  ai-config <command> [options]
+
+命令:
+  init [--source <tool>]    初始化统一配置仓库（扫描已有配置并合并）
+  sync [mcp|rules]          同步配置到所有工具（默认 all）
+  status                    查看同步状态
+  watch [start|stop|log]    管理自动监听（文件变化时自动同步）
+  doctor                    检查环境健康状态
+  help                      显示此帮助
+
+配置源选项:
+  --source codex            使用 Codex 配置作为基准（默认）
+  --source cursor           使用 Cursor 配置作为基准
+  --source claude-code      使用 Claude Code 配置作为基准
+
+示例:
+  ai-config init                          # 交互式初始化
+  ai-config init --source codex           # 以 Codex 为基准初始化
+  ai-config sync                          # 同步所有配置
+  ai-config sync mcp                      # 只同步 MCP
+  ai-config watch start                   # 启动自动监听
+  ai-config status                        # 查看状态
+
+配置文件:
+  ~/.config/ai-config/mcp.json            # 统一 MCP 配置源
+  ~/.config/ai-config/rules.md            # 统一规则源
+
+更多信息: https://github.com/user/ai-config-sync
+EOF
+}
+
+# ---- 主入口 ----
+main() {
+    local cmd="${1:-help}"
+    shift 2>/dev/null || true
+
+    case "$cmd" in
+        init)
+            local source=""
+            if [[ "${1:-}" == "--source" ]]; then
+                source="${2:-}"
+            fi
+            cmd_init "$source"
+            ;;
+        sync)   cmd_sync "${1:-all}" ;;
+        status) cmd_status ;;
+        watch)  cmd_watch "${1:-start}" ;;
+        doctor) cmd_doctor ;;
+        help|-h|--help) show_help ;;
+        *)
+            err "未知命令: $cmd"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
