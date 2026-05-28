@@ -111,6 +111,28 @@ ai-config watch start
 - **Rules / Skills**：通过符号链接，改文件即生效（实时）
 - **MCP**：Codex 和 Claude Code 需要格式转换，`ai-config sync` 或 `ai-config watch start` 自动处理
 
+## 项目级配置
+
+除了全局配置（`~/.codex/`, `~/.cursor/`, `~/.claude/`），每个 AI 工具还支持项目级配置：
+
+| 工具 | 全局 Rules | 项目级 Rules |
+|------|-----------|-------------|
+| Codex | `~/.codex/AGENTS.md` | `<project>/AGENTS.md` |
+| Cursor | `~/.cursorrules` | `<project>/.cursorrules` |
+| Claude Code | `~/.claude/CLAUDE.md` | `<project>/CLAUDE.md` |
+
+使用 `ai-config sync project` 可以将统一规则同步到指定项目：
+
+```bash
+# 同步项目级配置
+ai-config sync project --project /path/to/your/project
+
+# 同时同步全局 + 项目级
+ai-config sync all --project /path/to/your/project
+```
+
+这会在项目目录下创建符号链接，让所有 AI 工具在该项目中使用统一的规则。
+
 ## 配置仓库结构
 
 ```

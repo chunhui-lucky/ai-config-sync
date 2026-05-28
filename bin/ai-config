@@ -44,12 +44,13 @@ ai-config — 统一 AI 编程工具配置管理
   ai-config <command> [options]
 
 命令:
-  init [--source <tool>]    初始化统一配置仓库（扫描已有配置并合并）
-  sync [mcp|rules]          同步配置到所有工具（默认 all）
-  status                    查看同步状态
-  watch [start|stop|log]    管理自动监听（文件变化时自动同步）
-  doctor                    检查环境健康状态
-  help                      显示此帮助
+  init [--source <tool>]           初始化统一配置仓库（扫描已有配置并合并）
+  sync [mcp|rules|project|all]     同步配置到所有工具（默认 all）
+       [--project <path>]          同时同步项目级配置
+  status                           查看同步状态
+  watch [start|stop|log]           管理自动监听（文件变化时自动同步）
+  doctor                           检查环境健康状态
+  help                             显示此帮助
 
 配置源选项:
   --source codex            使用 Codex 配置作为基准（默认）
@@ -57,12 +58,14 @@ ai-config — 统一 AI 编程工具配置管理
   --source claude-code      使用 Claude Code 配置作为基准
 
 示例:
-  ai-config init                          # 交互式初始化
-  ai-config init --source codex           # 以 Codex 为基准初始化
-  ai-config sync                          # 同步所有配置
-  ai-config sync mcp                      # 只同步 MCP
-  ai-config watch start                   # 启动自动监听
-  ai-config status                        # 查看状态
+  ai-config init                                        # 交互式初始化
+  ai-config init --source codex                         # 以 Codex 为基准初始化
+  ai-config sync                                        # 同步所有全局配置
+  ai-config sync mcp                                    # 只同步 MCP
+  ai-config sync project --project /path/to/project     # 同步项目级配置
+  ai-config sync all --project /path/to/project         # 同步全局 + 项目级
+  ai-config watch start                                 # 启动自动监听
+  ai-config status                                      # 查看状态
 
 配置文件:
   ~/.config/ai-config/mcp.json            # 统一 MCP 配置源
@@ -85,7 +88,7 @@ main() {
             fi
             cmd_init "$source"
             ;;
-        sync)   cmd_sync "${1:-all}" ;;
+        sync)   cmd_sync "$@" ;;
         status) cmd_status ;;
         watch)  cmd_watch "${1:-start}" ;;
         doctor) cmd_doctor ;;

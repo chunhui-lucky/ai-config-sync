@@ -104,6 +104,28 @@ The installer automatically installs `watchdog` on Windows and creates `.bat` / 
 - **Rules / Skills**: Symlinks — editing the file takes effect immediately (real-time)
 - **MCP**: Codex and Claude Code need format conversion, handled automatically by `ai-config sync` or `ai-config watch start`
 
+## Project-Level Config
+
+In addition to global configs (`~/.codex/`, `~/.cursor/`, `~/.claude/`), each AI tool also supports project-level configs:
+
+| Tool | Global Rules | Project-Level Rules |
+|------|-------------|---------------------|
+| Codex | `~/.codex/AGENTS.md` | `<project>/AGENTS.md` |
+| Cursor | `~/.cursorrules` | `<project>/.cursorrules` |
+| Claude Code | `~/.claude/CLAUDE.md` | `<project>/CLAUDE.md` |
+
+Use `ai-config sync project` to sync unified rules to a specific project:
+
+```bash
+# Sync project-level config only
+ai-config sync project --project /path/to/your/project
+
+# Sync both global + project-level
+ai-config sync all --project /path/to/your/project
+```
+
+This creates symlinks in the project directory so all AI tools use the same unified rules when working in that project.
+
 ## Config Repo Structure
 
 ```

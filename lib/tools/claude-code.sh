@@ -72,3 +72,17 @@ tool_get_rules_source() {
         echo "$CLAUDE_RULES"
     fi
 }
+
+# 项目级配置
+tool_sync_project_rules() {
+    local project_path="$1"
+    local rules_src="$2"
+    local project_rules="$project_path/CLAUDE.md"
+    safe_symlink "$rules_src" "$project_rules" "CLAUDE.md (project)"
+}
+
+tool_status_project() {
+    local project_path="$1"
+    local project_rules="$project_path/CLAUDE.md"
+    check_link_status "$project_rules" "$RULES_SRC"
+}

@@ -40,3 +40,17 @@ tool_get_rules_source() {
         echo "$CURSOR_RULES"
     fi
 }
+
+# 项目级配置
+tool_sync_project_rules() {
+    local project_path="$1"
+    local rules_src="$2"
+    local project_rules="$project_path/.cursorrules"
+    safe_symlink "$rules_src" "$project_rules" ".cursorrules (project)"
+}
+
+tool_status_project() {
+    local project_path="$1"
+    local project_rules="$project_path/.cursorrules"
+    check_link_status "$project_rules" "$RULES_SRC"
+}
