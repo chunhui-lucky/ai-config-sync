@@ -1,5 +1,7 @@
 # ai-config-sync
 
+**中文文档** | [English](README_EN.md)
+
 > 统一管理 Codex / Cursor / Claude Code 的 MCP、Rules、Skills 配置。改一处，三端生效。
 
 ## 痛点
@@ -14,7 +16,19 @@
 
 ## 快速开始
 
-### 安装
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.ps1 | iex
+```
+
+### Windows (Git Bash)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/chunhui-lucky/ai-config-sync/main/install.sh | bash
@@ -67,6 +81,24 @@ ai-config watch start
 | `ai-config status` | 查看同步状态 |
 | `ai-config watch [start\|stop\|log]` | 管理自动监听 |
 | `ai-config doctor` | 检查环境健康状态 |
+
+## 平台支持
+
+| 平台 | 符号链接 | MCP 同步 | 自动监听 | 开机自启 |
+|------|---------|----------|---------|---------|
+| **macOS** | `ln -sf` | TOML / symlink / CLI | fswatch | LaunchAgent |
+| **Linux** | `ln -sf` | TOML / symlink / CLI | fswatch | 后台进程 |
+| **WSL** | `ln -sf` | TOML / symlink / CLI | fswatch | 后台进程 |
+| **Windows (Git Bash)** | `mklink /J` | TOML / junction / CLI | Python watchdog | Task Scheduler |
+| **Windows (PowerShell)** | 通过 Git Bash | 通过 Git Bash | 通过 Git Bash | Task Scheduler |
+
+### Windows 前置依赖
+
+- **Git for Windows**（包含 Git Bash）— [下载](https://git-scm.com/download/win)
+- **Python 3** — [下载](https://www.python.org/downloads/)
+- **pip**（Python 3 自带）— 用于安装 `watchdog` 文件监听库
+
+安装器会自动安装 `watchdog`，并创建 `.bat` / `.ps1` 包装脚本，使 `ai-config` 在 Git Bash 和 cmd.exe / PowerShell 中都能使用。
 
 ## 同步机制
 
@@ -174,7 +206,7 @@ tool_get_rules_source() {
 ## 自动监听
 
 ```bash
-# 启动（macOS 使用 LaunchAgent，开机自启；Linux 使用后台进程）
+# 启动（macOS: LaunchAgent, Linux: 后台进程, Windows: Task Scheduler）
 ai-config watch start
 
 # 停止
@@ -184,7 +216,7 @@ ai-config watch stop
 ai-config watch log
 ```
 
-需要安装 [fswatch](https://github.com/emcrisostomo/fswatch)：
+需要安装文件监听工具：
 
 ```bash
 # macOS
@@ -195,6 +227,9 @@ sudo apt install fswatch
 
 # Fedora
 sudo yum install fswatch
+
+# Windows (自动安装，或手动)
+pip install watchdog
 ```
 
 ## 卸载
@@ -204,7 +239,11 @@ sudo yum install fswatch
 ai-config watch stop
 
 # 卸载工具（保留配置数据）
+# macOS / Linux / Windows Git Bash:
 bash ~/.config/ai-config-sync/install.sh --uninstall
+
+# Windows PowerShell:
+# .\install.ps1 -Uninstall
 
 # 完全清除（包括配置数据）
 rm -rf ~/.config/ai-config/

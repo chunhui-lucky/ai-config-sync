@@ -3,6 +3,40 @@
 # utils.sh — 公共函数库：颜色、备份、符号链接、日志、交互
 # ============================================================
 
+# ---- 平台检测 ----
+detect_platform() {
+    case "$(uname -s 2>/dev/null)" in
+        Darwin*)  PLATFORM="macos" ;;
+        Linux*)
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                PLATFORM="wsl"
+            else
+                PLATFORM="linux"
+            fi
+            ;;
+        MINGW*|MSYS*|CYGWIN*)
+            PLATFORM="windows"
+            ;;
+        *)
+            PLATFORM="unknown"
+            ;;
+    esac
+}
+detect_platform
+
+# Windows 下把 Unix 路径转成 Windows 路径（给 cmd.exe / powershell 用）
+to_win_path() {
+    local p="$1"
+    if [[ "$PLATFORM" == "windows" ]]; then
+        # /c/Users/foo → C:\Users\foo
+        echo "$p" | sed 's|^/\([a-zA-Z]\)/|\U\1:\\|;s|/|\\|g'
+    elif [[ "$PLATFORM" == "wsl" ]]; then
+        wslpath -w "$p" 2>/dev/null || echo "$p"
+    else
+        echo "$p"
+    fi
+}
+
 # ---- 颜色 ----
 if [[ -t 1 ]]; then
     RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
@@ -40,23 +74,55 @@ backup_file() {
 }
 
 # ---- 符号链接 ----
+# 跨平台：macOS/Linux 用 ln -sf，Windows Git Bash 用 mklink（junction），WSL 用 ln -sf
 safe_symlink() {
     local src="$1" dst="$2" label="$3"
-    if [[ -L "$dst" ]]; then
+
+    # 已经是正确链接
+    if [[ -L "$dst" ]] || [[ -e "$dst" && "$(readlink "$dst" 2>/dev/null)" == "$src" ]]; then
         local cur
-        cur=$(readlink "$dst")
+        cur=$(readlink "$dst" 2>/dev/null)
         if [[ "$cur" == "$src" ]]; then
             ok "$label → 已链接"
             return 0
         fi
-        rm "$dst"
-    elif [[ -e "$dst" ]]; then
-        backup_file "$dst"
-        rm "$dst"
     fi
+
+    # 清理旧目标
+    if [[ -L "$dst" ]] || [[ -e "$dst" ]]; then
+        if [[ ! -L "$dst" ]]; then
+            backup_file "$dst"
+        fi
+        rm -rf "$dst"
+    fi
+
     mkdir -p "$(dirname "$dst")"
-    ln -sf "$src" "$dst"
-    ok "$label → $(basename "$src")"
+
+    case "$PLATFORM" in
+        windows)
+            # Windows (Git Bash): 用 cmd.exe mklink 创建 junction（不需要管理员权限）
+            local win_src win_dst
+            win_src=$(to_win_path "$src")
+            win_dst=$(to_win_path "$dst")
+            if cmd.exe /c "mklink /J \"$win_dst\" \"$win_src\"" &>/dev/null; then
+                ok "$label → $(basename "$src") (junction)"
+            else
+                # fallback: 直接复制
+                cp "$src" "$dst"
+                ok "$label → $(basename "$src") (复制，symlink 不可用)"
+            fi
+            ;;
+        wsl)
+            # WSL: 普通 symlink 即可（Windows 侧能识别）
+            ln -sf "$src" "$dst"
+            ok "$label → $(basename "$src")"
+            ;;
+        *)
+            # macOS / Linux
+            ln -sf "$src" "$dst"
+            ok "$label → $(basename "$src")"
+            ;;
+    esac
 }
 
 # ---- 交互 ----
@@ -103,6 +169,9 @@ check_link_status() {
         else
             echo "⚠ 链接到其他 → $target"
         fi
+    elif [[ "$PLATFORM" == "windows" && -d "$path" ]]; then
+        # Windows junction 不会被 readlink 识别，检查是否指向目标
+        echo "✓ 已链接 (Windows junction)"
     elif [[ -e "$path" ]]; then
         echo "⚠ 独立文件（未链接）"
     else

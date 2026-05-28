@@ -19,11 +19,21 @@ cmd_doctor() {
     fi
 
     # ---- fswatch ----
-    if command -v fswatch &>/dev/null; then
-        ok "fswatch $(fswatch --version 2>&1 | head -1)"
+    if [[ "$PLATFORM" == "windows" ]]; then
+        if python3 -c "import watchdog" &>/dev/null 2>&1; then
+            ok "watchdog (Python, for file watching)"
+        else
+            warn "watchdog 未安装（自动监听不可用）"
+            info "安装: pip install watchdog"
+        fi
     else
-        warn "fswatch 未安装（自动监听不可用）"
-        info "安装: brew install fswatch"
+        if command -v fswatch &>/dev/null; then
+            ok "fswatch $(fswatch --version 2>&1 | head -1)"
+        else
+            warn "fswatch 未安装（自动监听不可用）"
+            info "macOS:  brew install fswatch"
+            info "Linux:  sudo apt install fswatch"
+        fi
     fi
 
     # ---- skillshare ----
